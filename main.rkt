@@ -7,6 +7,7 @@
 (require net/url
          net/head
          net/uri-codec
+         net/base64
          (planet dherman/json:3:0))
 
 ; CouchDB server specification.
@@ -173,28 +174,64 @@
        (hash-has-key? doc 'reason)))
 
 ; Retrieves given URL.
-(define (get-url url)
-  (let* ((port (get-pure-port url #:redirections 1))
+(define (get-url url (header null))
+  (let* ((port (get-pure-port url header #:redirections 1))
          (doc (read-json port)))
     (if (error-document? doc)
       (raise-error (current-continuation-marks) doc "GET" url)
       doc)))
 
 ; Stores datum on given URL.
-(define (put-url url data)
-  (let* ((port (put-pure-port url data))
+(define (put-url url data (header null))
+  (let* ((port (put-pure-port url data header))
          (doc (read-json port)))
     (if (error-document? doc)
       (raise-error (current-continuation-marks) doc "PUT" url)
       doc)))
 
 ; Deletes given URL.
-(define (delete-url url)
-  (let* ((port (delete-pure-port url))
+(define (delete-url url (header null))
+  (let* ((port (delete-pure-port url header))
          (doc (read-json port)))
     (if (error-document? doc)
       (raise-error (current-continuation-marks) doc "DELETE" url)
       doc)))
+
+; Checks that character is an allowed base64 string character.
+(define (base64-character? char)
+  (or (and (char>=? char #\A)
+           (char<=? char #\Z))
+      (and (char>=? char #\a)
+           (char<=? char #\z))
+      (and (char>=? char #\0)
+           (char<=? char #\9))
+      (char=? char #\=)
+      (char=? char #\/)))
+
+; Base64-encodes UTF-8 string.
+(define (base64-encode/string str)
+  (list->string
+    (filter base64-character?
+            (string->list
+              (bytes->string/utf-8
+                (base64-encode
+                  (string->bytes/utf-8 str)))))))
+
+; Creates headers for HTTP Basic authentication if provided in the
+; given server-or-db structure.
+(define (auth-header server-or-db)
+  (define-values (login password)
+    (if (couchdb-server? server-or-db)
+      (values (couchdb-server-user server-or-db)
+              (couchdb-server-password server-or-db))
+      (let ((server (couchdb-database-server server-or-db)))
+        (values (couchdb-server-user server)
+                (couchdb-server-password server)))))
+  (if (and login password)
+    (list (string-append "Authorization: Basic "
+                         (base64-encode/string
+                           (string-append login ":" password))))
+    null))
 
 ;
 ; Returns server MOTD & info document or database info,
@@ -203,23 +240,23 @@
 (define (couchdb-info server-or-db)
   (if (couchdb-server? server-or-db)
     (let ((url (make-server-url server-or-db null)))
-      (get-url url))
+      (get-url url (auth-header server-or-db)))
     (let ((url (make-database-url server-or-db null)))
-      (get-url url))))
+      (get-url url (auth-header server-or-db)))))
 
 ;
 ; Deletes given database.
 ;
 (define (couchdb-delete-db db)
   (let* ((url (make-database-url db null)))
-    (delete-url url)))
+    (delete-url url (auth-header db))))
 
 ;
 ; Returns list of all databases.
 ;
 (define (couchdb-all-dbs server)
   (let* ((url (make-server-url server (list "_all_dbs"))))
-    (get-url url)))
+    (get-url url (auth-header server))))
 
 ;
 ; Returns document associated with given ID from given database.
@@ -255,7 +292,7 @@
 
   ; Perform the request and return result.
   (let* ((url (make-database-url db (list id) params)))
-    (get-url url)))
+    (get-url url (auth-header db))))
 
 ;
 ; Stores new document or revision in the database.
@@ -263,7 +300,9 @@
 (define (couchdb-put db document)
   (let* ((id  (hash-ref document '_id))
          (url (make-database-url db (list id))))
-    (put-url url (string->bytes/utf-8 (jsexpr->json document)))))
+    (put-url url
+             (string->bytes/utf-8 (jsexpr->json document))
+             (auth-header db))))
 
 ;
 ; Updates given document using the update-fn and then
@@ -291,7 +330,7 @@
   (let* ((id  (hash-ref document '_id))
          (rev (hash-ref document '_rev))
          (url (make-database-url db (list id) `((rev . ,rev)))))
-    (delete-url url)))
+    (delete-url url (auth-header db))))
 
 (define (couchdb-view db view #:include-docs? (include-docs? #f)
                               #:key (key (void))
@@ -376,6 +415,6 @@
        (add-param 'update_seq "true"))
 
   (let* ((url (make-view-url db view params)))
-    (get-url url)))
+    (get-url url (auth-header db))))
 
 ; vim:set ts=2 sw=2 et:
