@@ -1,23 +1,24 @@
 #lang scribble/manual
 
+@require[(planet cce/scheme:4:1/planet)]
 @require[(for-label racket net/url)]
 @require[(for-label (planet dherman/json:3:0))]
-@require[(for-label (planet mordae/couchdb:1:7))]
+@require[(for-label (this-package-in main))]
 
 @title{CouchDB}
 @author{@(author+email "Jan Dvorak" "mordae@anilinux.org")}
 
 CouchDB client for Racket.
 
-@defmodule[(planet mordae/couchdb:1:7)]{
- Most functions in this module can raise @racket[exn:couchdb?] exceptions.
+@defmodule/this-package[]
 
- There are two special ones, that you might want to handle separately,
- they are @racket[exn:couchdb:conflict?] which is raised when document
- to be modified have been altered by another client and
- @racket[exn:couchdb:not-found?] which is raised when given document
- simply does not exist.
-}
+Most functions in this module can raise @racket[exn:couchdb?] exceptions.
+
+There are two special ones, that you might want to handle separately,
+they are @racket[exn:couchdb:conflict?] which is raised when document
+to be modified have been altered by another client and
+@racket[exn:couchdb:not-found?] which is raised when given document
+simply does not exist.
 
 @defproc[(couchdb-connect (#:host host string? "localhost")
                           (#:port port exact-nonnegative-integer? 5984)
