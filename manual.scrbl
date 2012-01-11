@@ -62,6 +62,18 @@ simply does not exist.
  Returns list with names of all databases present on the server.
 }
 
+@defproc[(couchdb-all-docs (db couchdb-database?))
+         jsexpr?]{
+ Returns contents of the _all_docs special view that maps all documents in
+ given database by their ids.
+}
+
+@defproc[(couchdb-uuids (server couchdb-server?)
+                        (#:count count exact-nonnegative-integer? 1))
+         (listof string?)]{
+ Returns list of server-generated UUIDs.
+}
+
 @defproc[(couchdb-get (db couchdb-database?)
                       (id string?)
                       (#:rev rev (or/c string? (symbols 'current)) 'current)

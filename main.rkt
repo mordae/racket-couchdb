@@ -58,6 +58,13 @@
            (couchdb-all-dbs (-> couchdb-server?
                                 jsexpr?))
 
+           (couchdb-all-docs (-> couchdb-database?
+                                 jsexpr?))
+
+           (couchdb-uuids (->* (couchdb-server?)
+                               (#:count exact-nonnegative-integer?)
+                               (listof string?)))
+
            (couchdb-get (->* (couchdb-database?
                               string?)
                              (#:rev (or/c string?
@@ -257,6 +264,22 @@
 (define (couchdb-all-dbs server)
   (let* ((url (make-server-url server (list "_all_dbs"))))
     (get-url url (auth-header server))))
+
+;
+; Returns contents of the _all_docs special view that maps
+; all documents in database by their ids.
+;
+(define (couchdb-all-docs db)
+  (let* ((url (make-database-url db (list "_all_docs"))))
+    (get-url url (auth-header db))))
+
+;
+; Returns list of server-generated UUIDs.
+;
+(define (couchdb-uuids server #:count (count 1))
+  (let* ((url (make-server-url server (list "_uuids")
+                               `((count . ,(number->string count))))))
+    (hash-ref (get-url url (auth-header server)) 'uuids)))
 
 ;
 ; Returns document associated with given ID from given database.
