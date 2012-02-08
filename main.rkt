@@ -4,11 +4,11 @@
 ;
 
 ; Our dependencies.
-(require net/url
+(require (planet dherman/json)
+         net/url
          net/head
          net/uri-codec
-         net/base64
-         (planet dherman/json:3:0))
+         net/base64)
 
 ; CouchDB server specification.
 (define-struct/contract
