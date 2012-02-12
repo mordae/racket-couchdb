@@ -295,7 +295,7 @@
 
   ; Adds new parameter.
   (define (add-param name value)
-    (set! params (cons (cons name value) params)))
+    (set! params (append params (list (cons name value)))))
 
   ; Include revision if not 'current
   (or (equal? rev 'current)
