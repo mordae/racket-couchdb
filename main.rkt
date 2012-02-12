@@ -375,7 +375,7 @@
 
   ; Adds new parameter.
   (define (add-param name value)
-    (set! params (cons (cons name value) params)))
+    (set! params (append params (list (cons name value)))))
 
   ; Shall we include document bodies?
   (and include-docs?
