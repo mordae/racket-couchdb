@@ -1,10 +1,12 @@
-#lang racket
+#lang racket/base
 ;
 ; CouchDB interface.
 ;
 
 ; Our dependencies.
 (require (planet dherman/json)
+         racket/contract
+         racket/bool
          net/url
          net/head
          net/uri-codec
